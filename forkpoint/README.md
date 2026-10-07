@@ -20,6 +20,8 @@ make run-cpp       # one scripted run: out/cpp-run.txt, out/cpp-log.txt, propert
 make test-cpp      # test.sh: milestones, properties, determinism, replay
 make build-rust    # the Rust firmware (rust/, on the Rust OpenBSW port)
 make test-rust     # the same checks on the Rust image
+make equiv         # equiv.sh: fpt equiv of both images, consoles, catalogs
+make report        # docs/forkpoint/set3-equivalence.md from out/
 ```
 
 `west build` needs Zephyr's Python modules (`pip install -r
@@ -53,7 +55,10 @@ catalog: `fpt catalog out/body-ecu-rust.elf` lists every property it states, and
 `rust/` is the MCU firmware in Rust (see `rust/README.md`): the same systems on the Rust
 port of OpenBSW, wired as `main.cpp` wires them, printing the same lines and stating the
 same properties. `make build-rust` builds it through west like the C++ one, and
-`make test-rust` runs the same checks on it.
+`make equiv` runs `fpt equiv` on the two images through the scenario: every UDP frame
+the ECU sends must match byte for byte, and `compare_consoles.py` requires the consoles
+to match line for line once Zephyr's log timestamps and the LED port addresses, which
+differ between any two images, are masked.
 
 ## The scenario
 

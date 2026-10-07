@@ -31,7 +31,7 @@ RUST_ELF := $(OUT)/body-ecu-rust.elf
 # The Forkpoint SDK's Rust crate reads the hostcall window's address at build time.
 export FPT_HOSTCALL_BASE ?= 0xA0000000
 
-.PHONY: build-cpp run-cpp test-cpp build-rust run-rust test-rust clean
+.PHONY: build-cpp run-cpp test-cpp build-rust run-rust test-rust equiv report clean
 build-cpp: $(CPP_ELF)
 $(CPP_ELF): FORCE
 	west build -b $(ZEPHYR_BOARD) -d "$(CPP_BUILD)" --pristine=auto "$(REPO)/app" -- \
@@ -64,6 +64,14 @@ run-rust: $(RUST_ELF)
 
 test-rust: $(RUST_ELF)
 	FPT="$(FPT)" FPT_BOARDS="$(FPT_BOARDS)" BOARD=$(BOARD) CYCLES=$(CYCLES) ./test.sh rust "$(RUST_ELF)"
+
+# Both images through the same scenarios: fpt equiv, the consoles, the properties.
+equiv: $(CPP_ELF) $(RUST_ELF)
+	FPT="$(FPT)" FPT_BOARDS="$(FPT_BOARDS)" BOARD=$(BOARD) CYCLES=$(CYCLES) ./equiv.sh
+
+# The equivalence report, from what test-cpp, test-rust, and equiv left under out/.
+report:
+	python3 report.py "$(OUT)" "$(REPO)/docs/forkpoint/set3-equivalence.md"
 
 clean:
 	rm -rf -- "$(OUT)"
