@@ -1,0 +1,7 @@
+# Copyright 2026 Mist Tecnologia LTDA. All rights reserved.
+# Copyright 2026 Mist Tecnologia LTDA. All rights reserved.
+
+edition = "2024"
+use_small_heuristics = "Max"
+newline_style = "Unix"
+imports_granularity = "Module"

@@ -111,10 +111,22 @@ impl<const N: usize> Record<N> {
         module: &str,
         message: &str,
     ) -> Self {
-        assert!(N == record_len(file, module, message), "record length mismatch");
-        assert!(file.len() <= u16::MAX as usize, "file name too long for the catalog");
-        assert!(module.len() <= u16::MAX as usize, "module path too long for the catalog");
-        assert!(message.len() <= u16::MAX as usize, "message too long for the catalog");
+        assert!(
+            N == record_len(file, module, message),
+            "record length mismatch"
+        );
+        assert!(
+            file.len() <= u16::MAX as usize,
+            "file name too long for the catalog"
+        );
+        assert!(
+            module.len() <= u16::MAX as usize,
+            "module path too long for the catalog"
+        );
+        assert!(
+            message.len() <= u16::MAX as usize,
+            "message too long for the catalog"
+        );
         let mut bytes = [0u8; N];
         let mut at = put(&mut bytes, 0, &MAGIC);
         at = put(&mut bytes, at, &(N as u32).to_le_bytes());
@@ -210,8 +222,11 @@ fn record(bytes: &[u8]) -> Option<(Assertion<'_>, usize)> {
     }
     let kind = AssertionKind::from_u8(bytes[8])?;
     let id = u64::from_le_bytes(bytes.get(12..20)?.try_into().ok()?);
-    let (file_len, module_len, message_len) =
-        (usize::from(u16_at(28)?), usize::from(u16_at(30)?), usize::from(u16_at(32)?));
+    let (file_len, module_len, message_len) = (
+        usize::from(u16_at(28)?),
+        usize::from(u16_at(30)?),
+        usize::from(u16_at(32)?),
+    );
     let text = |start: usize, len: usize| core::str::from_utf8(bytes.get(start..start + len)?).ok();
     let file = text(HEADER_LEN, file_len)?;
     let class = text(HEADER_LEN + file_len, module_len)?;
@@ -219,10 +234,22 @@ fn record(bytes: &[u8]) -> Option<(Assertion<'_>, usize)> {
     if HEADER_LEN + file_len + module_len + message_len > len {
         return None;
     }
-    let location =
-        SourceLocation { file, begin_line: u32_at(20)?, begin_column: u32_at(24)?, class };
+    let location = SourceLocation {
+        file,
+        begin_line: u32_at(20)?,
+        begin_column: u32_at(24)?,
+        class,
+    };
     let id = if id == 0 { message_id(message) } else { id };
-    Some((Assertion { id, message, kind, location }, len))
+    Some((
+        Assertion {
+            id,
+            message,
+            kind,
+            location,
+        },
+        len,
+    ))
 }
 
 /// Emit a catalog record for an assertion at the call site, with the `catalog` feature.
@@ -276,7 +303,12 @@ mod tests {
         assert_eq!(assertion.kind.display_type(), "assert_always");
         assert_eq!(
             assertion.location,
-            SourceLocation { file: "src/q.rs", begin_line: 42, begin_column: 9, class: "fw::q" }
+            SourceLocation {
+                file: "src/q.rs",
+                begin_line: 42,
+                begin_column: 9,
+                class: "fw::q"
+            }
         );
         assert!(parsed.next().is_none());
     }

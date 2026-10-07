@@ -9,7 +9,7 @@ and the Rust crate's calls compile out, so production builds are unchanged.
   and `sdk/rust/forkpoint`, at the revision `09f99b0` (SDK last changed in `537ceee`).
 - License: Mist Tecnologia LTDA, as the files' headers say.
 - Local changes: `rust/forkpoint/Cargo.toml` names this repository's Rust workspace
-  instead of Forkpoint's.
+  instead of Forkpoint's, and the sources are formatted by that workspace's `cargo fmt`.
 
 To refresh it, copy the two headers and the crate's `src/` and `Cargo.toml` from one
 Forkpoint revision, keep the local change, and update the revision above.

@@ -1,0 +1,19 @@
+# Copyright 2026 Mist Tecnologia LTDA. All rights reserved.
+
+[package]
+name = "body-ecu-lighting"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+description = "The exterior lighting controller (libs/body/lighting)"
+
+[lib]
+name = "body_ecu_lighting"
+
+[dependencies]
+body-ecu-ports.workspace = true
+forkpoint.workspace = true
+
+[dev-dependencies]
+body-ecu-ports = { workspace = true, features = ["mock"] }

@@ -1,0 +1,38 @@
+# Copyright 2026 Mist Tecnologia LTDA. All rights reserved.
+
+[package]
+name = "body-ecu-adapters"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+description = "The Body ECU's Zephyr adapters and its systems as OpenBSW lifecycle components (libs/adapters/zephyr, libs/adapters/system)"
+
+[lib]
+name = "body_ecu_adapters"
+
+[features]
+# The SOME/IP transport over the shim's UDP socket (HAS_OPENSOMEIP in the C++). Without
+# it the system records what it would send, for tests.
+transport = []
+# The ADC adapter and the speed simulator system (CONFIG_ADC).
+adc = []
+# The CAN adapter, the CAN gateway system and DoCAN (CONFIG_CAN).
+can = []
+
+[dependencies]
+body-ecu-ports.workspace = true
+body-ecu-lighting.workspace = true
+body-ecu-door-lock.workspace = true
+body-ecu-vehicle-mode.workspace = true
+body-ecu-ignition.workspace = true
+body-ecu-speed-simulator.workspace = true
+body-ecu-diagnostics.workspace = true
+body-ecu-can-gateway.workspace = true
+body-ecu-someip.workspace = true
+body-ecu-ffi.workspace = true
+forkpoint.workspace = true
+openbsw-lifecycle.workspace = true
+
+[dev-dependencies]
+body-ecu-ports = { workspace = true, features = ["mock"] }

@@ -363,8 +363,14 @@ mod tests {
         assert_eq!(assertion_probe(Always, false, true), (KIND_ALWAYS, 1));
         assert_eq!(assertion_probe(Always, false, false), (KIND_UNREACHABLE, 0));
         assert_eq!(assertion_probe(Sometimes, true, true), (KIND_SOMETIMES, 1));
-        assert_eq!(assertion_probe(Reachability, true, true), (KIND_REACHABLE, 1));
-        assert_eq!(assertion_probe(Reachability, false, false), (KIND_UNREACHABLE, 1));
+        assert_eq!(
+            assertion_probe(Reachability, true, true),
+            (KIND_REACHABLE, 1)
+        );
+        assert_eq!(
+            assertion_probe(Reachability, false, false),
+            (KIND_UNREACHABLE, 1)
+        );
     }
 
     #[test]

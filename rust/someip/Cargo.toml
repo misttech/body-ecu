@@ -1,0 +1,14 @@
+# Copyright 2026 Mist Tecnologia LTDA. All rights reserved.
+
+[package]
+name = "body-ecu-someip"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+description = "The SOME/IP message codec and UDP endpoint the Body ECU's server uses"
+
+[lib]
+name = "body_ecu_someip"
+
+[dependencies]

@@ -3,7 +3,7 @@
 [package]
 name = "forkpoint"
 description = "Firmware SDK for reporting probes to the Forkpoint host"
-workspace = "../../../src"
+workspace = "../../../../rust"
 edition.workspace = true
 version.workspace = true
 publish.workspace = true

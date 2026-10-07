@@ -38,7 +38,11 @@ pub const fn probe_stores(kind: u32, id: u64, value: u64) -> [(u32, u32); 5] {
 pub fn hostcall_version() -> u32 {
     #[cfg(feature = "enabled")]
     {
-        if load(MAGIC_OFFSET) == MAGIC { load(VERSION_OFFSET) } else { 0 }
+        if load(MAGIC_OFFSET) == MAGIC {
+            load(VERSION_OFFSET)
+        } else {
+            0
+        }
     }
     #[cfg(not(feature = "enabled"))]
     {
@@ -190,7 +194,10 @@ fn unmask_interrupts(primask: u32) {
     }
 }
 
-#[cfg(all(feature = "enabled", not(any(target_arch = "riscv32", target_arch = "arm"))))]
+#[cfg(all(
+    feature = "enabled",
+    not(any(target_arch = "riscv32", target_arch = "arm"))
+))]
 compile_error!("the hostcall SDK supports only RISC-V and Cortex-M");
 
 #[cfg(test)]

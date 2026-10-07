@@ -1,0 +1,67 @@
+# Copyright 2026 Mist Tecnologia LTDA. All rights reserved.
+
+# The Rust port of the Body ECU's MCU firmware: one crate per C++ library under libs/,
+# the app crate for app/src/main.cpp, and the glue to Zephyr. The OpenBSW crates come
+# from the Rust port of OpenBSW and of its Zephyr adaptation, checked out side by side
+# under ../../openbsw-mss by west (see ../west.yml). See README.md.
+[workspace]
+resolver = "3"
+members = [
+    "ports",
+    "lighting",
+    "door-lock",
+    "vehicle-mode",
+    "ignition",
+    "speed-simulator",
+    "diagnostics",
+    "can-gateway",
+    "someip",
+    "ffi",
+    "adapters",
+    "app",
+    "../third_party/forkpoint-sdk/rust/forkpoint",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "Apache-2.0"
+publish = false
+
+[workspace.dependencies]
+body-ecu-ports = { path = "ports" }
+body-ecu-lighting = { path = "lighting" }
+body-ecu-door-lock = { path = "door-lock" }
+body-ecu-vehicle-mode = { path = "vehicle-mode" }
+body-ecu-ignition = { path = "ignition" }
+body-ecu-speed-simulator = { path = "speed-simulator" }
+body-ecu-diagnostics = { path = "diagnostics" }
+body-ecu-can-gateway = { path = "can-gateway" }
+body-ecu-someip = { path = "someip" }
+body-ecu-ffi = { path = "ffi" }
+body-ecu-adapters = { path = "adapters" }
+forkpoint = { path = "../third_party/forkpoint-sdk/rust/forkpoint" }
+openbsw-util = { path = "../../openbsw-mss/openbsw/rust/util" }
+openbsw-async = { path = "../../openbsw-mss/openbsw/rust/async" }
+openbsw-lifecycle = { path = "../../openbsw-mss/openbsw/rust/lifecycle" }
+openbsw-runtime = { path = "../../openbsw-mss/openbsw/rust/runtime" }
+openbsw-zephyr-ffi = { path = "../../openbsw-mss/openbsw-zephyr/rust/zephyr-ffi" }
+openbsw-async-zephyr = { path = "../../openbsw-mss/openbsw-zephyr/rust/async-zephyr" }
+openbsw-bsp-zephyr = { path = "../../openbsw-mss/openbsw-zephyr/rust/bsp-zephyr" }
+
+# The firmware optimizes for speed with fat LTO, as the Rust OpenBSW demo does (its
+# PORTING.md): the hot paths cross crates. Debug info stays for the ELF, and panic =
+# "abort" since there is no unwinder on the target.
+[profile.dev]
+panic = "abort"
+opt-level = 3
+debug = true
+codegen-units = 1
+lto = "fat"
+
+[profile.release]
+panic = "abort"
+opt-level = 3
+debug = true
+codegen-units = 1
+lto = "fat"
