@@ -1,0 +1,14 @@
+# Copyright 2026 Mist Tecnologia LTDA. All rights reserved.
+
+[package]
+name = "body-ecu-ffi"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+description = "Hand-written FFI to the Body ECU's Zephyr shim: LEDs, the button, timers, UDP sockets, and the log"
+
+[lib]
+name = "body_ecu_ffi"
+
+[dependencies]

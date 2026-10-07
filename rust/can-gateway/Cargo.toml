@@ -1,0 +1,18 @@
+# Copyright 2026 Mist Tecnologia LTDA. All rights reserved.
+
+[package]
+name = "body-ecu-can-gateway"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+description = "The SOME/IP to CAN gateway (libs/platform/can-gateway)"
+
+[lib]
+name = "body_ecu_can_gateway"
+
+[dependencies]
+body-ecu-ports.workspace = true
+
+[dev-dependencies]
+body-ecu-ports = { workspace = true, features = ["mock"] }

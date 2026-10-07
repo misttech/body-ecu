@@ -1,0 +1,18 @@
+# Copyright 2026 Mist Tecnologia LTDA. All rights reserved.
+
+[package]
+name = "body-ecu-ports"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+description = "The Body ECU's port interfaces (libs/platform/ports)"
+
+[lib]
+name = "body_ecu_ports"
+
+[features]
+# The recording mocks of libs/platform/ports/mock, for tests.
+mock = []
+
+[dependencies]

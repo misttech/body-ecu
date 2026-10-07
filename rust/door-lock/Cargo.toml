@@ -1,0 +1,19 @@
+# Copyright 2026 Mist Tecnologia LTDA. All rights reserved.
+
+[package]
+name = "body-ecu-door-lock"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+description = "The door lock controller (libs/body/door-lock)"
+
+[lib]
+name = "body_ecu_door_lock"
+
+[dependencies]
+body-ecu-ports.workspace = true
+forkpoint.workspace = true
+
+[dev-dependencies]
+body-ecu-ports = { workspace = true, features = ["mock"] }

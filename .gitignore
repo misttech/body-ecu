@@ -33,3 +33,5 @@ docs/architecture/body-ecu-architecture.png
 
 # Forkpoint runs and builds (forkpoint/README.md)
 /forkpoint/out/
+# Cargo's host build of rust/ (the firmware build goes under forkpoint/out/)
+/rust/target/

@@ -26,8 +26,12 @@ CYCLES ?= 2400000000
 
 CPP_BUILD := $(OUT)/build-cpp
 CPP_ELF := $(OUT)/body-ecu-cpp.elf
+RUST_BUILD := $(OUT)/build-rust
+RUST_ELF := $(OUT)/body-ecu-rust.elf
+# The Forkpoint SDK's Rust crate reads the hostcall window's address at build time.
+export FPT_HOSTCALL_BASE ?= 0xA0000000
 
-.PHONY: build-cpp run-cpp test-cpp clean
+.PHONY: build-cpp run-cpp test-cpp build-rust run-rust test-rust clean
 build-cpp: $(CPP_ELF)
 $(CPP_ELF): FORCE
 	west build -b $(ZEPHYR_BOARD) -d "$(CPP_BUILD)" --pristine=auto "$(REPO)/app" -- \
@@ -43,6 +47,23 @@ run-cpp: $(CPP_ELF)
 
 test-cpp: $(CPP_ELF)
 	FPT="$(FPT)" FPT_BOARDS="$(FPT_BOARDS)" BOARD=$(BOARD) CYCLES=$(CYCLES) ./test.sh cpp "$(CPP_ELF)"
+
+# The Rust firmware (rust/app), on the Rust OpenBSW port west checks out beside the
+# upstream trees; `rustup target add thumbv7em-none-eabi` installs its target.
+build-rust: $(RUST_ELF)
+$(RUST_ELF): FORCE
+	west build -b $(ZEPHYR_BOARD) -d "$(RUST_BUILD)" --pristine=auto "$(REPO)/rust/app" -- \
+		-DBODY_ECU_FORKPOINT=ON -DEXTRA_CONF_FILE="$(CURDIR)/forkpoint.conf"
+	cp "$(RUST_BUILD)/zephyr/zephyr.elf" "$@"
+
+run-rust: $(RUST_ELF)
+	"$(FPT)" explore --boards-dir "$(FPT_BOARDS)" --board $(BOARD) --max-cycles $(CYCLES) \
+		--i2c-script scripts/scenario.script --properties "$(OUT)/rust-properties.jsonl" \
+		"$(RUST_ELF)" >"$(OUT)/rust-run.txt" 2>"$(OUT)/rust-log.txt"; \
+	cat "$(OUT)/rust-run.txt"
+
+test-rust: $(RUST_ELF)
+	FPT="$(FPT)" FPT_BOARDS="$(FPT_BOARDS)" BOARD=$(BOARD) CYCLES=$(CYCLES) ./test.sh rust "$(RUST_ELF)"
 
 clean:
 	rm -rf -- "$(OUT)"

@@ -18,6 +18,8 @@ cd body-ecu/forkpoint
 make build-cpp     # the C++ firmware, instrumented (BODY_ECU_FORKPOINT=ON)
 make run-cpp       # one scripted run: out/cpp-run.txt, out/cpp-log.txt, properties
 make test-cpp      # test.sh: milestones, properties, determinism, replay
+make build-rust    # the Rust firmware (rust/, on the Rust OpenBSW port)
+make test-rust     # the same checks on the Rust image
 ```
 
 `west build` needs Zephyr's Python modules (`pip install -r
@@ -43,7 +45,15 @@ unchanged.
 
 The C++ SDK records no catalog, so `fpt` judges only the properties a run reaches:
 an `FPT_ALWAYS` the run never reaches is not reported. The Rust build carries the
-catalog.
+catalog: `fpt catalog out/body-ecu-rust.elf` lists every property it states, and
+`rust/app/fpt_catalog.ld` keeps the records out of the image.
+
+## The Rust firmware
+
+`rust/` is the MCU firmware in Rust (see `rust/README.md`): the same systems on the Rust
+port of OpenBSW, wired as `main.cpp` wires them, printing the same lines and stating the
+same properties. `make build-rust` builds it through west like the C++ one, and
+`make test-rust` runs the same checks on it.
 
 ## The scenario
 

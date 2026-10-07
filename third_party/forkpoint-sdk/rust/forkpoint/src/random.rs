@@ -69,7 +69,10 @@ mod tests {
     #[test]
     fn without_a_device_values_come_from_the_fallback_and_vary() {
         let values = [get_random(), get_random(), get_random()];
-        assert!(values[0] != values[1] && values[1] != values[2], "{values:?}");
+        assert!(
+            values[0] != values[1] && values[1] != values[2],
+            "{values:?}"
+        );
     }
 
     #[test]

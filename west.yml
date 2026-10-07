@@ -6,6 +6,8 @@ manifest:
       url-base: https://github.com/eclipse-openbsw
     - name: vtz
       url-base: https://github.com/vtz
+    - name: misttech
+      url-base: https://github.com/misttech
 
   projects:
     - name: zephyr
@@ -32,6 +34,24 @@ manifest:
       remote: vtz
       revision: v0.1.0
       path: modules/opensomeip
+
+    # The Rust port of OpenBSW and of its Zephyr adaptation (rust/ in each, beside the
+    # unmodified upstream sources), which the Rust MCU firmware under rust/ builds on. They
+    # sit side by side under openbsw-mss/ because openbsw-zephyr/rust reaches the OpenBSW
+    # crates at ../../openbsw/rust. The C++ firmware keeps the upstream pins above.
+    - name: openbsw-mss
+      repo-path: openbsw
+      remote: misttech
+      revision: 7e11f31b76f74780828481dc236a980367818aeb
+      path: openbsw-mss/openbsw
+      import: false
+
+    - name: openbsw-zephyr-mss
+      repo-path: openbsw-zephyr
+      remote: misttech
+      revision: 80a23e53d61204f181e84a84919ebff2577db30a
+      path: openbsw-mss/openbsw-zephyr
+      import: false
 
   self:
     path: body-ecu

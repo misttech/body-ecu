@@ -1,0 +1,18 @@
+# Copyright 2026 Mist Tecnologia LTDA. All rights reserved.
+
+[package]
+name = "body-ecu-diagnostics"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+description = "UDS services, the DTC store, and the DoIP codec (libs/platform/diagnostics)"
+
+[lib]
+name = "body_ecu_diagnostics"
+
+[dependencies]
+body-ecu-ports.workspace = true
+
+[dev-dependencies]
+body-ecu-ports = { workspace = true, features = ["mock"] }
