@@ -8,6 +8,8 @@
 #define LIGHT_LOG(...) std::printf(__VA_ARGS__)
 #endif
 
+#include <forkpoint/hostcall.h>
+
 namespace body_ecu::body {
 
 LightingController::LightingController(ports::IGpioPort& gpio,
@@ -38,6 +40,10 @@ bool LightingController::setLightState(LightId id, bool on) {
     bool old_state = states_[idx];
     states_[idx] = on;
     gpio_.write(config_.gpio_pins[idx], on);
+    FPT_ALWAYS(states_[idx] == on, "lighting: a light's state follows the request");
+    FPT_SOMETIMES(on, "lighting: a light turns on");
+    FPT_SOMETIMES(!on, "lighting: a light turns off");
+    fpt_send_event("lighting.light", (static_cast<uint64_t>(idx) << 8) | (on ? 1u : 0u));
 
     if (old_state != on) {
         publishLightStatusChanged();

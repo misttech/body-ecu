@@ -7,6 +7,8 @@
 #define printk(...) std::printf(__VA_ARGS__)
 #endif
 
+#include <forkpoint/hostcall.h>
+
 namespace body_ecu::body {
 
 DoorLockController::DoorLockController(ports::IGpioPort& gpio,
@@ -101,7 +103,8 @@ void DoorLockController::setError() {
 void DoorLockController::onModeChanged(ports::VehicleMode /*old_mode*/,
                                        ports::VehicleMode new_mode) {
     if (new_mode == ports::VehicleMode::Run) {
-        lock();
+        bool locked = lock();
+        FPT_SOMETIMES(locked, "door_lock: entering Run locks the door");
     }
 }
 
@@ -172,6 +175,10 @@ ports::SomeIpMessage DoorLockController::handleGetStatus(
 
 void DoorLockController::publishStateChanged(LockState old_state,
                                              LockState new_state) {
+    FPT_ALWAYS(old_state != new_state, "door_lock: a state change changes the state");
+    FPT_SOMETIMES(new_state == LockState::Locked, "door_lock: the door locks");
+    FPT_SOMETIMES(new_state == LockState::Unlocked, "door_lock: the door unlocks");
+    fpt_send_event("door_lock.state", static_cast<uint64_t>(new_state));
     std::vector<uint8_t> payload = {static_cast<uint8_t>(old_state),
                                     static_cast<uint8_t>(new_state)};
     someip_.sendEvent(config_.service_id, config_.lock_state_changed_event,

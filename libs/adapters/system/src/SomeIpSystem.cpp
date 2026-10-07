@@ -1,5 +1,7 @@
 #include "SomeIpSystem.h"
 
+#include <forkpoint/hostcall.h>
+
 #ifdef __ZEPHYR__
 #include <zephyr/sys/printk.h>
 #define SOMEIP_LOG(...) printk(__VA_ARGS__)
@@ -250,10 +252,13 @@ ports::SomeIpMessage SomeIpSystem::dispatch(
     const ports::SomeIpMessage& request) {
     SOMEIP_LOG("[SOME/IP] dispatch: lookup 0x%04X/0x%04X\n",
                request.service_id, request.method_id);
+    fpt_send_event("someip.request",
+                   (static_cast<uint64_t>(request.service_id) << 16) | request.method_id);
     ports::MethodHandler handler;
     {
         PlatformLockGuard lock(mutex_);
         auto it = methods_.find(makeKey(request.service_id, request.method_id));
+        FPT_SOMETIMES(it == methods_.end(), "someip: an unknown method is answered with an error");
         if (it == methods_.end()) {
             SOMEIP_LOG("[SOME/IP] dispatch: method NOT FOUND\n");
             ports::SomeIpMessage err = request;
@@ -267,6 +272,9 @@ ports::SomeIpMessage SomeIpSystem::dispatch(
     auto response = handler(request);
     SOMEIP_LOG("[SOME/IP] dispatch: handler returned rc=0x%02X\n",
                response.return_code);
+    FPT_ALWAYS(response.service_id == request.service_id && response.method_id == request.method_id,
+               "someip: a response names the request's service and method");
+    FPT_SOMETIMES(response.return_code != 0, "someip: a handler refuses a request");
     return response;
 }
 

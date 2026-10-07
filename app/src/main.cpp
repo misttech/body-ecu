@@ -16,6 +16,8 @@ LOG_MODULE_REGISTER(body_ecu, LOG_LEVEL_INF);
 #include <zephyr/drivers/adc.h>
 #endif
 
+#include <forkpoint/hostcall.h>
+
 #include <async/AsyncBinding.h>
 #include <lifecycle/LifecycleManager.h>
 #include <bsp/timer/SystemTimer.h>
@@ -112,6 +114,7 @@ int main(void)
         [](char const* file, int line, char const* expr) {
             printk("\n*** ASSERT FAILED: file=%s line=%d expr=%s\n",
                    file ? file : "(null)", line, expr ? expr : "(null)");
+            FPT_UNREACHABLE("body_ecu: an estd assertion fails");
             k_panic();
         });
 
@@ -139,6 +142,7 @@ int main(void)
     std::vector<struct gpio_dt_spec> led_specs(std::begin(leds), std::end(leds));
     static adapters::GpioAdapter gpio_adapter(led_specs);
     bool gpio_ok = gpio_adapter.configure();
+    FPT_ALWAYS(gpio_ok, "body_ecu: the LEDs' GPIO ports are ready");
 
     static const struct gpio_dt_spec user_btn =
         GPIO_DT_SPEC_GET_OR(DT_ALIAS(sw0), gpios, {0});
@@ -373,6 +377,8 @@ int main(void)
     can_adapter.startReceiving();
 #endif
     LOG_INF("Body ECU ready - all systems running");
+    FPT_REACHABLE("body_ecu: all systems running");
+    fpt_setup_complete(lifecycleManager.getLevelCount());
 
     {
         auto vin_data = vehicle_info.readData(adapters::VehicleInfoProvider::kDidVin);
