@@ -1,5 +1,7 @@
 #include "vehicle_mode/VehicleModeManager.h"
 
+#include <forkpoint/hostcall.h>
+
 namespace body_ecu::body {
 
 VehicleModeManager::VehicleModeManager(ports::ISomeIpService& someip,
@@ -20,11 +22,16 @@ void VehicleModeManager::init() {
 }
 
 bool VehicleModeManager::setMode(ports::VehicleMode mode) {
-    if (!isValidTransition(mode_, mode)) return false;
+    bool valid = isValidTransition(mode_, mode);
+    FPT_SOMETIMES(!valid, "vehicle_mode: an invalid transition is refused");
+    if (!valid) return false;
     if (mode == mode_) return true;
 
     auto old = mode_;
     mode_ = mode;
+    FPT_ALWAYS(isValidTransition(old, mode_), "vehicle_mode: only valid transitions happen");
+    FPT_SOMETIMES(mode_ == ports::VehicleMode::Run, "vehicle_mode: the vehicle runs");
+    fpt_send_event("vehicle_mode.changed", static_cast<uint64_t>(mode_));
     publishModeChanged();
     notifyObservers(old, mode);
     return true;

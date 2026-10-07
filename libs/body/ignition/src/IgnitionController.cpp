@@ -7,6 +7,8 @@
 #define printk(...) std::printf(__VA_ARGS__)
 #endif
 
+#include <forkpoint/hostcall.h>
+
 namespace body_ecu::body {
 
 IgnitionController::IgnitionController(ports::IButtonInput& button,
@@ -31,6 +33,10 @@ void IgnitionController::init() {
 
 void IgnitionController::onButtonPress() {
     auto mode = mode_manager_.getMode();
+    FPT_ALWAYS(!cranking_ || mode == ports::VehicleMode::Crank,
+               "ignition: cranking only while the mode is Crank");
+    FPT_SOMETIMES(mode == ports::VehicleMode::Run, "ignition: the button is pressed in Run");
+    fpt_send_event("ignition.button", static_cast<uint64_t>(mode));
 
     if (cranking_) {
         printk("[ignition] Button ignored (cranking)\n");

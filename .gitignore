@@ -30,3 +30,6 @@ notes.md
 /out_oci/
 /out_rpm/
 docs/architecture/body-ecu-architecture.png
+
+# Forkpoint runs and builds (forkpoint/README.md)
+/forkpoint/out/

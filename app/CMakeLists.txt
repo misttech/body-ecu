@@ -45,6 +45,14 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/../cmake/someip_codegen.cmake)
 # Port interfaces (header-only)
 add_subdirectory(${LIBS_ROOT}/platform/ports ${CMAKE_CURRENT_BINARY_DIR}/ports)
 
+# Forkpoint: report the firmware's properties, lifecycle, and events to the deterministic
+# virtual MCU through its hostcall window at 0xA0000000, which exists only there. Off by
+# default, so a production image carries none of it (see forkpoint/README.md).
+option(BODY_ECU_FORKPOINT "Report properties and events to Forkpoint's virtual MCU" OFF)
+if(BODY_ECU_FORKPOINT)
+    target_compile_definitions(ports INTERFACE FPT_ENABLE FPT_HOSTCALL_BASE=0xA0000000u)
+endif()
+
 # Domain modules
 add_subdirectory(${LIBS_ROOT}/body/lighting ${CMAKE_CURRENT_BINARY_DIR}/lighting)
 add_subdirectory(${LIBS_ROOT}/body/door-lock ${CMAKE_CURRENT_BINARY_DIR}/door-lock)

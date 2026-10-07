@@ -1,0 +1,31 @@
+# What happens to the Body ECU from outside, once it is running: a SOME/IP tester at
+# 192.168.100.1 sends requests to the ECU at 192.168.100.10:30490, and the user presses
+# the board's button (PC13). Times are virtual; the ECU is ready at about 1.3 s.
+#
+# SOME/IP header: service, method, length, client, session, protocol 1, interface 1,
+# message type (0 request), return code (0), then the payload.
+# vehicle_info (0x1004) get_vin (0x0001)
+2s     ethernet  udp  192.168.100.1:40000  192.168.100.10:30490  10 04 00 01 00 00 00 08 00 01 00 01 01 01 00 00
+# lighting (0x1000) set_light_state (0x0001): headlight on
++100ms ethernet  udp  192.168.100.1:40000  192.168.100.10:30490  10 00 00 01 00 00 00 0a 00 01 00 02 01 01 00 00 00 01
+# lighting get_light_status (0x0002)
++100ms ethernet  udp  192.168.100.1:40000  192.168.100.10:30490  10 00 00 02 00 00 00 08 00 01 00 03 01 01 00 00
+# door_lock (0x1001) lock (0x0001), then get_status (0x0003)
++100ms ethernet  udp  192.168.100.1:40000  192.168.100.10:30490  10 01 00 01 00 00 00 08 00 01 00 04 01 01 00 00
++100ms ethernet  udp  192.168.100.1:40000  192.168.100.10:30490  10 01 00 03 00 00 00 08 00 01 00 05 01 01 00 00
+# vehicle_mode (0x1002) set (0x0002) = Run (2), then get (0x0001)
++100ms ethernet  udp  192.168.100.1:40000  192.168.100.10:30490  10 02 00 02 00 00 00 09 00 01 00 06 01 01 00 00 02
++100ms ethernet  udp  192.168.100.1:40000  192.168.100.10:30490  10 02 00 01 00 00 00 08 00 01 00 07 01 01 00 00
+# vehicle_mode set = Off (0): not a valid transition from Run, so it is refused
++100ms ethernet  udp  192.168.100.1:40000  192.168.100.10:30490  10 02 00 02 00 00 00 09 00 01 00 08 01 01 00 00 00
+# speed_sensor (0x1003) get_speed (0x0001): the software-only handler on an emulator
++100ms ethernet  udp  192.168.100.1:40000  192.168.100.10:30490  10 03 00 01 00 00 00 08 00 01 00 09 01 01 00 00
+# a method nobody registered: lighting 0x00ff
++100ms ethernet  udp  192.168.100.1:40000  192.168.100.10:30490  10 00 00 ff 00 00 00 08 00 01 00 0a 01 01 00 00
+# lighting set_light_state: headlight off
++100ms ethernet  udp  192.168.100.1:40000  192.168.100.10:30490  10 00 00 01 00 00 00 0a 00 01 00 0b 01 01 00 00 00 00
+# the user button, in Run: back to Accessory
+3.5s   gpioc  pin  13  high
++50ms  gpioc  pin  13  low
+# door_lock unlock (0x0002)
+4s     ethernet  udp  192.168.100.1:40000  192.168.100.10:30490  10 01 00 02 00 00 00 08 00 01 00 0c 01 01 00 00
