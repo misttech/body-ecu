@@ -58,5 +58,7 @@ FPT_HOSTCALL_BASE=0xA0000000 cargo clippy -p rustapp --target thumbv7em-none-eab
 
 The firmware builds like the C++ one, through west (`make -C forkpoint build-rust`):
 `west build -b nucleo_h753zi rust/app -- -DBODY_ECU_FORKPOINT=ON`, with the Rust target
-`thumbv7em-none-eabi` (`rustup target add`). See `PORTING.md` for how the C++ is ported
-and `UNSAFE.md` for the `unsafe` count per crate.
+`thumbv7em-none-eabi` (`rustup target add`). `make -C forkpoint build-rust-rivet` builds
+the same application with [rivet](third_party/rivet/VENDOR.md), the C library written in
+Rust, as Zephyr's C library (`forkpoint/README.md`). See `PORTING.md` for how the C++ is
+ported and `UNSAFE.md` for the `unsafe` count per crate.

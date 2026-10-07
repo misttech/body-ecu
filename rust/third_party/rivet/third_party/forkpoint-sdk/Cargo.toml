@@ -1,0 +1,19 @@
+# Copyright 2026 Mist Tecnologia LTDA. All rights reserved.
+
+[package]
+name = "rivet-forkpoint-sdk"
+description = "Firmware SDK for reporting probes to the Forkpoint host"
+workspace = "../../src"
+edition.workspace = true
+version.workspace = true
+publish.workspace = true
+
+[features]
+# Compile probe stores in. Firmware also sets FPT_HOSTCALL_BASE to the
+# hostcall device's address. Without this feature every call compiles out.
+enabled = ["catalog"]
+# Record every assertion call site in the .fpt_catalog section, without
+# probing. enabled implies it; a host build uses it alone to test the catalog.
+catalog = []
+
+[dependencies]

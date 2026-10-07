@@ -1,0 +1,13 @@
+# Copyright 2026 Mist Tecnologia LTDA. All rights reserved.
+
+[package]
+name = "zr"
+description = "Zero-dependency no_std building blocks, vendored from Fuchsia src/lib/zr"
+license = "BSD-3-Clause"
+workspace = "../../src"
+edition.workspace = true
+version.workspace = true
+publish.workspace = true
+
+[lib]
+path = "src/lib.rs"

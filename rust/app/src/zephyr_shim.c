@@ -587,6 +587,74 @@ int32_t cpp_can_get_state(int32_t *state, uint8_t *tx_error_count, uint8_t *rx_e
 }
 #endif
 
+// rivet as the C library (CONFIG_EXTERNAL_LIBC), with the kernel hooks of Forkpoint's
+// nucleo-g474re-zephyr-rivet example: errno is the running thread's, as Zephyr's own is, so
+// the socket errors the shim reads are the ones Zephyr set; a mutex keeps two threads'
+// printf output apart; write() takes rivet's output to the console UART by polling, as
+// printk does; and _exit() masks interrupts and spins. The firmware's own heap is Zephyr's
+// (allocator.rs), so rivet's heap hooks stay unset.
+
+#ifdef CONFIG_EXTERNAL_LIBC
+#include <rivet_errno.h>
+#include <rivet_stdio.h>
+#include <zephyr/sys/errno_private.h>
+
+static bool in_thread(void) { return !k_is_pre_kernel() && !k_is_in_isr(); }
+
+static int *thread_errno(void) { return k_is_pre_kernel() ? NULL : z_errno(); }
+
+static const struct rivet_errno_hooks errno_hooks = {
+	.current = thread_errno,
+};
+
+K_MUTEX_DEFINE(stdout_mutex);
+
+static void lock_stdout(void)
+{
+	if (in_thread()) {
+		(void)k_mutex_lock(&stdout_mutex, K_FOREVER);
+	}
+}
+
+static void unlock_stdout(void)
+{
+	if (in_thread()) {
+		(void)k_mutex_unlock(&stdout_mutex);
+	}
+}
+
+static const struct rivet_stdio_hooks stdio_hooks = {
+	.lock = lock_stdout,
+	.unlock = unlock_stdout,
+};
+
+static int init_rivet_hooks(void)
+{
+	rivet_errno_set_hooks(&errno_hooks);
+	rivet_stdio_set_hooks(&stdio_hooks);
+	return 0;
+}
+SYS_INIT(init_rivet_hooks, PRE_KERNEL_1, 0);
+
+ssize_t write(int fd, const void *buf, size_t count)
+{
+	ARG_UNUSED(fd);
+	const unsigned char *bytes = buf;
+	for (size_t i = 0; i < count; i++) {
+		uart_poll_out(console_dev, bytes[i]);
+	}
+	return (ssize_t)count;
+}
+
+_Noreturn void _exit(int status)
+{
+	ARG_UNUSED(status);
+	(void)arch_irq_lock();
+	for (;;) {
+	}
+}
+#endif
+
 // The PWM LED of the OpenBSW demo, which this board's application does not drive;
 // declared for the zephyr_ffi crate.
 int32_t cpp_pwm_set_led0(uint32_t period_ns, uint32_t pulse_ns)

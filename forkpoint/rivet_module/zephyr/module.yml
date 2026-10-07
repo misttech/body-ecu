@@ -1,0 +1,5 @@
+# Copyright 2026 Mist Tecnologia LTDA. All rights reserved.
+# rivet as Zephyr's C library. See ../../README.md.
+name: rivet
+build:
+  cmake: zephyr

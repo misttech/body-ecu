@@ -22,6 +22,10 @@ make build-rust    # the Rust firmware (rust/, on the Rust OpenBSW port)
 make test-rust     # the same checks on the Rust image
 make equiv         # equiv.sh: fpt equiv of both images, consoles, catalogs
 make report        # docs/forkpoint/set3-equivalence.md from out/
+make build-rust-rivet  # the Rust firmware with rivet as its C library (needs clang)
+make test-rust-rivet   # newlib_free.sh on the linker map, then the same checks
+make equiv-rivet       # the rivet image against the C++ and the Rust images
+make report-rivet      # docs/forkpoint/set4-rivet.md from out/
 ```
 
 `west build` needs Zephyr's Python modules (`pip install -r
@@ -59,6 +63,19 @@ same properties. `make build-rust` builds it through west like the C++ one, and
 the ECU sends must match byte for byte, and `compare_consoles.py` requires the consoles
 to match line for line once Zephyr's log timestamps and the LED port addresses, which
 differ between any two images, are masked.
+
+## rivet as the C library
+
+`make build-rust-rivet` builds the Rust firmware once more with
+[rivet](../rust/third_party/rivet/VENDOR.md), the C library written in Rust, in place of
+Zephyr's minimal one: `rivet.conf` sets `CONFIG_EXTERNAL_LIBC`, `rivet_module/` hands
+Zephyr rivet's headers and archive (built by Cargo for `thumbv7em-none-eabi` with its
+allocator), and `rust/app/src/zephyr_shim.c` supplies the kernel hooks rivet takes (the
+running thread's `errno`, a lock for standard output) and the two calls it needs
+(`write` to the console UART, `_exit`). `newlib_free.sh` reads the linker map to show
+the link took rivet and nothing from the toolchain's newlib; `make equiv-rivet` runs the
+image against the C++ baseline and against the Rust image on Zephyr's C library, and
+`make report-rivet` writes `docs/forkpoint/set4-rivet.md`.
 
 ## The scenario
 

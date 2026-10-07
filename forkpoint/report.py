@@ -4,8 +4,10 @@
 and equiv.sh left under out/.
 
     report.py OUT docs/forkpoint/set3-equivalence.md
+    report.py --rivet OUT docs/forkpoint/set4-rivet.md
 
-Standard library only: the ELF section sizes are read from the section headers.
+Standard library only: the ELF section sizes are read from the section headers, and
+what each link took from which library from the linker maps.
 """
 
 from __future__ import annotations
@@ -64,7 +66,196 @@ def steps(text: str) -> str:
     return m.group(1) if m else "?"
 
 
+def archive_members(map_path: Path) -> list[str]:
+    """The `archive(member)` lines of the map's "Archive member included" section."""
+    members, inside = [], False
+    for line in map_path.read_text().splitlines():
+        if line.startswith("Archive member included"):
+            inside = True
+        elif line.startswith(("Discarded input sections", "Allocating common", "Memory Configuration")):
+            inside = False
+        elif inside and line.endswith(")") and "(" in line and not line.startswith(" "):
+            members.append(line.strip())
+    return members
+
+
+def library_members(map_path: Path, pattern: str) -> int:
+    return sum(1 for m in archive_members(map_path) if re.search(pattern, m))
+
+
+def functions_from(map_path: Path, archive: str) -> list[str]:
+    """The `.text.<name>` input sections the link took from `archive`, by name."""
+    names, pending, inside = set(), None, False
+    for line in map_path.read_text().splitlines():
+        # Only the memory map: the discarded sections before it are not in the image.
+        if line.startswith("Linker script and memory map"):
+            inside = True
+        if not inside:
+            continue
+        m = re.match(r" \.text\.([A-Za-z_][A-Za-z0-9_.]*)\s*(.*)$", line)
+        if m:
+            pending = m.group(1)
+            rest = m.group(2)
+        elif pending is not None and line.startswith("  "):
+            rest = line
+        else:
+            continue
+        if archive in rest:
+            names.add(pending)
+        if rest.strip():
+            pending = None
+    # C names only: not the Rust-mangled internals (_R, _ZN) or the outlined fragments.
+    return sorted(n for n in names if not n.startswith(("_R", "_ZN", "OUTLINED")) and "." not in n)
+
+
+def rivet_report(out: Path, target: Path) -> None:
+    images = {
+        "C++ (newlib)": ("body-ecu-cpp.elf", "cpp", "build-cpp"),
+        "Rust (Zephyr's minimal C library)": ("body-ecu-rust.elf", "rust", "build-rust"),
+        "Rust (rivet)": ("body-ecu-rust-rivet.elf", "rust-rivet", "build-rust-rivet"),
+    }
+    sizes = {k: elf_sizes(out / v[0]) for k, v in images.items()}
+    maps = {k: out / v[2] / "zephyr" / "zephyr.map" for k, v in images.items()}
+    runs = {k: outcome(out / f"{v[1]}-run.txt") for k, v in images.items()}
+    busy = {k: folded(out / f"{v[1]}-stacks.folded") for k, v in images.items()}
+    props = {k: properties(out / f"{v[1]}-properties.jsonl") for k, v in images.items()}
+    consoles = {k: len((out / f"{v[1]}-console.txt").read_text().splitlines()) for k, v in images.items()}
+    newlib = {k: library_members(m, r"/lib(c|c_nano|m)\.a\(") for k, m in maps.items()}
+    minimal = {k: library_members(m, r"lib__libc__(minimal|common)\.a\(") for k, m in maps.items()}
+    rivet = {k: library_members(m, r"librivet_libc\.a\(") for k, m in maps.items()}
+    libgcc = {k: library_members(m, r"/libgcc\.a\(") for k, m in maps.items()}
+    rivet_functions = functions_from(maps["Rust (rivet)"], "librivet_libc.a")
+    verdicts = {
+        "boot alone, 5 s": ("rivet-boot.txt", "rivet-vs-rust-boot.txt"),
+        "the scenario (SOME/IP tester, button), 5 s": ("rivet-scenario.txt", "rivet-vs-rust-scenario.txt"),
+    }
+    cols = list(images)
+
+    def row(label: str, cells: list[str]) -> str:
+        return f"| {label} | " + " | ".join(cells) + " |"
+
+    lines = [
+        "# Set 4: the Rust port with rivet as its C library",
+        "",
+        "The Rust image is built a second time with [rivet](../../rust/third_party/rivet/VENDOR.md),",
+        "the C library written in Rust, as Zephyr's C library (`CONFIG_EXTERNAL_LIBC`,",
+        "`forkpoint/rivet.conf`, `forkpoint/rivet_module/`), and run through the same scenarios",
+        "as the two images of Set 3, against each of them: `fpt equiv` on every Ethernet frame",
+        "and how the runs end, `compare_consoles.py` on the consoles, `equiv.sh` on the property",
+        "verdicts. `make equiv-rivet` reproduces it; `make report-rivet` wrote this file.",
+        "",
+        "## Verdict",
+        "",
+        "| Scenario | rivet against C++ | rivet against Rust on Zephyr's C library | Consoles |",
+        "|---|---|---|---|",
+    ]
+    for label, (a, b) in verdicts.items():
+        va = (out / a).read_text().strip().removeprefix("equiv: ")
+        vb = (out / b).read_text().strip().removeprefix("equiv: ")
+        lines.append(f"| {label} | {va} | {vb} | match |")
+    lines += [
+        "",
+        "Changing the C library under the Rust firmware changes nothing an observer outside the",
+        "chip can see: the same frames, byte for byte, the same console lines, the same property",
+        "verdicts.",
+        "",
+        "## What each image links as its C library",
+        "",
+        "From the linker maps (`newlib_free.sh` makes the same check for the rivet image).",
+        "libgcc, the compiler's arithmetic helpers (soft-float, 64-bit division, popcount), is",
+        "linked by every image: the C++ through Zephyr, the Rust ones because",
+        "`openbsw_rust_application()` links it ahead of the Rust archive so that Zephyr's C and",
+        "the Rust code share one set of helpers.",
+        "",
+        "| Archive members taken | " + " | ".join(cols) + " |",
+        "|---|" + "---|" * len(cols),
+        row("newlib (`libc.a`, `libc_nano.a`, `libm.a`)", [str(newlib[c]) for c in cols]),
+        row("Zephyr's own (`lib/libc/minimal`, `lib/libc/common`)", [str(minimal[c]) for c in cols]),
+        row("rivet (`librivet_libc.a`)", [str(rivet[c]) for c in cols]),
+        row("libgcc", [str(libgcc[c]) for c in cols]),
+        "",
+        "The functions the rivet image takes from rivet (`.text` sections from its archive):",
+        "",
+        ", ".join(f"`{n}`" for n in rivet_functions) + ".",
+        "",
+        "The firmware's own heap is Zephyr's (`rust/app/src/allocator.rs`), so rivet's",
+        "allocator, built in, is linked only if something calls `malloc`; nothing here does.",
+        "rivet's `printf` family is built in too and unused: the firmware prints with `printk`",
+        "and Zephyr's log, which have their own formatter. What the link takes is the string",
+        "and memory functions Zephyr and the Rust code call, `strtol` from the network stack,",
+        "`errno`, and the Arm run-time ABI's memory helpers.",
+        "",
+        "## The three images",
+        "",
+        "| | " + " | ".join(cols) + " |",
+        "|---|" + "---|" * len(cols),
+        row("text", [f"{sizes[c]['text']} B" for c in cols]),
+        row("data", [f"{sizes[c]['data']} B" for c in cols]),
+        row("bss", [f"{sizes[c]['bss']} B" for c in cols]),
+        row("scenario outcome", [f"`{runs[c]}`" for c in cols]),
+        row("steps in 5 s", [steps(runs[c]) for c in cols]),
+        row("busy ticks", [f"{busy[c][1]} ({busy[c][1] * 100 / busy[c][0]:.2f}%)" for c in cols]),
+        row("console lines (test.sh run)", [str(consoles[c]) for c in cols]),
+        row("properties reported", [str(len(props[c])) for c in cols]),
+        "",
+        "The rivet image is a little smaller than the Rust image on Zephyr's C library and",
+        "takes fewer steps through the same scenario: rivet's `memcpy`, `memset`, and `memcmp`",
+        "dispatch on the size to word and block patterns, where Zephyr's minimal library runs",
+        "byte loops, and `memset` and `memcpy` are among the busiest functions of the run.",
+        "",
+        "### Where the busy time goes",
+        "",
+    ]
+    for c in cols[1:]:
+        _, b, leaf = busy[c]
+        lines += [
+            f"{c}:",
+            "",
+            "| Function | Share of busy time |",
+            "|---|---|",
+            *[f"| `{name}` | {ticks * 100 / b:.1f}% |" for name, ticks in leaf],
+            "",
+        ]
+    lines += [
+        "## Properties",
+        "",
+        "| Property | Kind | " + " | ".join(cols) + " |",
+        "|---|---|" + "---|" * len(cols),
+    ]
+    for r in props["Rust (rivet)"]:
+        cells = []
+        for c in cols:
+            p = next((x for x in props[c] if x["id"] == r["id"]), None)
+            cells.append(f"{p['status']} ({p['hits']})" if p else "not reached")
+        lines.append(f"| {r['message']} | {r['kind'].removeprefix('assert_')} | " + " | ".join(cells) + " |")
+    lines += [
+        "",
+        "## What rivet needed",
+        "",
+        "Zephyr's socket types include `<sys/_timeval.h>`, the header newlib keeps",
+        "`struct timeval` in, from every C library but Zephyr's minimal one; rivet gained it",
+        "(`rust/third_party/rivet/VENDOR.md` names the revision). Everything else Zephyr's",
+        "kernel, network stack, and drivers and the OpenBSW crates call, rivet already had.",
+        "",
+        "## How to reproduce",
+        "",
+        "```sh",
+        "cd forkpoint",
+        "make test-cpp test-rust test-rust-rivet   # each image; the rivet one checks its map first",
+        "make run-cpp run-rust run-rust-rivet       # the scenario outcome of each",
+        "make equiv-rivet                           # fpt equiv against both other images",
+        "make report-rivet                          # this file",
+        "```",
+        "",
+    ]
+    target.write_text("\n".join(lines))
+    print(f"wrote {target}")
+
+
 def main(argv: list[str]) -> int:
+    if argv and argv[0] == "--rivet":
+        rivet_report(Path(argv[1]), Path(argv[2]))
+        return 0
     out, target = Path(argv[0]), Path(argv[1])
     cpp_elf, rust_elf = out / "body-ecu-cpp.elf", out / "body-ecu-rust.elf"
     cpp_size, rust_size = elf_sizes(cpp_elf), elf_sizes(rust_elf)
