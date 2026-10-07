@@ -35,3 +35,5 @@ docs/architecture/body-ecu-architecture.png
 /forkpoint/out/
 # Cargo's host build of rust/ (the firmware build goes under forkpoint/out/)
 /rust/target/
+# rivet's checked-in build configuration, not a build directory
+!/rust/third_party/rivet/build/

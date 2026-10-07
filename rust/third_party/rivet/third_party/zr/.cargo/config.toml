@@ -1,0 +1,8 @@
+# Copyright 2026 Mist Tecnologia LTDA. All rights reserved.
+
+# Cargo reads this file only when run from third_party/zr/ or below; the
+# workspace config in src/.cargo/ does not reach here. Keep the build in out/ as
+# src/.cargo/config.toml does: relative to third_party/zr/, out/default is the
+# symlink `make out-dir` creates.
+[build]
+target-dir = "../../out/default"

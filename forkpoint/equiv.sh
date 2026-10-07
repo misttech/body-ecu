@@ -9,6 +9,10 @@
 # property verdicts of each image's own run are compared by message.
 #
 #   FPT=... FPT_BOARDS=... ./equiv.sh         outputs under out/equiv-*
+#
+# CPP_ELF and RUST_ELF name other images (defaults: the C++ and the Rust image), CPP_NAME
+# and RUST_NAME the test.sh runs whose property verdicts are compared (cpp, rust), and
+# PREFIX where the outputs go (out/PREFIX-*).
 set -euo pipefail
 
 here=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
@@ -17,23 +21,26 @@ boards=${FPT_BOARDS:?set FPT_BOARDS to the boards directory of the Forkpoint che
 board=${BOARD:-nucleo-h743zi}
 cycles=${CYCLES:-2400000000}
 out="$here/out"
-cpp="$out/body-ecu-cpp.elf"
-rust="$out/body-ecu-rust.elf"
-error="$out/equiv-error.txt"
+cpp=${CPP_ELF:-$out/body-ecu-cpp.elf}
+rust=${RUST_ELF:-$out/body-ecu-rust.elf}
+cpp_name=${CPP_NAME:-cpp}
+rust_name=${RUST_NAME:-rust}
+prefix=${PREFIX:-equiv}
+error="$out/$prefix-error.txt"
 
 equiv() {
     local name="$1"
     shift
-    rm -rf "$out/equiv-$name-console" "$out/equiv-$name-wire"
+    rm -rf "$out/$prefix-$name-console" "$out/$prefix-$name-wire"
     "$fpt" equiv --boards-dir "$boards" --board "$board" --max-cycles "$cycles" "$@" \
-        --console "$out/equiv-$name-console" --ignore-console --wire "$out/equiv-$name-wire" \
-        "$cpp" "$rust" >"$out/equiv-$name.txt" 2>"$error" || {
-        cat "$out/equiv-$name.txt" "$error" >&2
+        --console "$out/$prefix-$name-console" --ignore-console --wire "$out/$prefix-$name-wire" \
+        "$cpp" "$rust" >"$out/$prefix-$name.txt" 2>"$error" || {
+        cat "$out/$prefix-$name.txt" "$error" >&2
         exit 1
     }
     python3 "$here/compare_consoles.py" \
-        "$out/equiv-$name-console/a.txt" "$out/equiv-$name-console/b.txt" || exit 1
-    echo "OK: $name: $(cat "$out/equiv-$name.txt")"
+        "$out/$prefix-$name-console/a.txt" "$out/$prefix-$name-console/b.txt" || exit 1
+    echo "OK: $name: $(cat "$out/$prefix-$name.txt")"
 }
 
 # Boot alone: nothing arrives, the ECU's own traffic (ARP for the tester it never
@@ -41,9 +48,9 @@ equiv() {
 equiv boot
 # The scenario: the SOME/IP tester's requests and the button.
 equiv scenario --i2c-script "$here/scripts/scenario.script"
-grep -qE 'frames \([1-9][0-9]* sent, [1-9][0-9]* received' "$out/equiv-scenario.txt" || {
+grep -qE 'frames \([1-9][0-9]* sent, [1-9][0-9]* received' "$out/$prefix-scenario.txt" || {
     echo "the scenario put nothing on the wire:" >&2
-    cat "$out/equiv-scenario.txt" >&2
+    cat "$out/$prefix-scenario.txt" >&2
     exit 1
 }
 
@@ -51,7 +58,7 @@ grep -qE 'frames \([1-9][0-9]* sent, [1-9][0-9]* received' "$out/equiv-scenario.
 # the message's hash alone, the Rust by the message too, so they are compared by id. The
 # verdict is each property's status; the hit counts are reported, not required to match,
 # since a scheduling difference can change how often a passing property is checked.
-python3 - "$out/cpp-properties.jsonl" "$out/rust-properties.jsonl" <<'PY' || exit 1
+python3 - "$out/$cpp_name-properties.jsonl" "$out/$rust_name-properties.jsonl" <<'PY' || exit 1
 import json, sys
 verdicts = []
 for path in sys.argv[1:]:

@@ -1,0 +1,75 @@
+# Copyright 2026 Mist Tecnologia LTDA. All rights reserved.
+
+[workspace]
+members = [".", "../third_party/forkpoint-sdk", "../third_party/zr"]
+resolver = "3"
+
+[workspace.package]
+edition = "2024"
+version = "0.1.0"
+publish = false
+
+[package]
+name = "rivet-libc"
+description = "Minimal freestanding C library for embedded devices"
+edition.workspace = true
+version.workspace = true
+publish.workspace = true
+# The Rust modules sit beside this manifest: a directory per C header and a file
+# per function. The headers are in ../include.
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
+
+# For a bare-metal target, compiles the C entry points of stdio.h with clang.
+build = "build.rs"
+
+[lib]
+path = "lib.rs"
+
+[features]
+default = ["automemcpy"]
+# memcpy, memmove, memset, and memcmp dispatch on the size to block and word
+# patterns. Without it they are byte loops: smaller and slower.
+automemcpy = []
+# malloc, calloc, realloc, aligned_alloc, free, and free_sized, from heaps the
+# firmware gives memory to: one per domain, or a single default heap. Off by
+# default, so firmware that brings its own allocator links without duplicate
+# symbols.
+cmpctmalloc = []
+# abort, a failed assert, and a panic print a backtrace as symbolizer markup,
+# and rivet_backtrace prints one on request (include/rivet_backtrace.h). Off by
+# default: without it nothing of it is compiled, and abort, assert, and panic
+# print only their message.
+backtrace = []
+# Report Forkpoint properties: the C contract each function relies on (non-null
+# pointers, no overlap, ctype arguments in range) and that abort, a failed
+# assert, or a panic is never reached. For firmware run under Forkpoint; set
+# FPT_HOSTCALL_BASE to the board's hostcall address. Without it every property
+# compiles out, conditions included.
+forkpoint = ["dep:forkpoint", "forkpoint/enabled"]
+# Also report coverage properties: edge paths, such as a memmove over an
+# overlap, that a test suite should reach at least once. A firmware image that
+# never takes them would report them as failed, so only a test run turns them on.
+forkpoint-coverage = ["forkpoint"]
+
+[dependencies]
+forkpoint = { package = "rivet-forkpoint-sdk", path = "../third_party/forkpoint-sdk", optional = true }
+zr = { path = "../third_party/zr" }
+
+# The unsafe conventions of docs/development/languages/rust/README.md, made
+# mechanical: every unsafe block says why it is sound, every unsafe fn says
+# what its caller must guarantee, and pointers change type through `cast`,
+# `from_ref`, and `from_mut`, which keep the pointee type visible, not `as`.
+[lints.rust]
+unsafe_op_in_unsafe_fn = "deny"
+
+[lints.clippy]
+undocumented_unsafe_blocks = "deny"
+missing_safety_doc = "deny"
+ptr_as_ptr = "deny"
+cast_ptr_alignment = "deny"
+borrow_as_ptr = "deny"
+ref_as_ptr = "deny"
+transmute_ptr_to_ptr = "deny"
